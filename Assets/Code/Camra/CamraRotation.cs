@@ -1,57 +1,97 @@
-﻿using UnityEngine;
+﻿//CamraRotation old
 
+using UnityEngine;
+using System.Collections;
 
 public class CamraRotation : MonoBehaviour
 {
-    Vector2?[] oldTouchPositions = {
-        null,
-        null
-    };
-    Vector2 oldTouchVector;
-    float oldTouchDistance;
-    private float[] minMaxX = new float[2] { -3F, 3F };
-    private float[] minMaxY = new float[2] { -15F, 15F };
-    private float[] minMaxZ = new float[2] { -10F, 10F };
-    private Vector3 tempPos = new Vector3(0, 0, 0);
-    GameObject MainCamera;
+    // Rotation variables
+    private float minimumX = -20F;
+    private float maximumX = 20F;
+    private float minimumY = 00F;
+    private float maximumY = 30F;
+    private float xAxis = 0;
+    private float yAxis = 0;
+    private float xAxisTemp = 0;
+    private float yAxisTemp = 0;
+    private Vector2 current = new Vector2(0, 0);
+    private Vector2 firstTouch = new Vector2(0, 0);
+    private Vector2 secondTouch = new Vector2(0, 0);
+
+    // Zoom variables
+    Camera camra;
+    private float[] minMaxZoom = new float[2] { 30F, 90F };
+    public float perspectiveZoomSpeed = 0.2f;        // The rate of change of the field of view in perspective mode.
+    public float orthoZoomSpeed = 0.2f;        // The rate of change of the orthographic size in orthographic mode.
+
 
     void Start()
     {
-        MainCamera = GameObject.FindGameObjectWithTag("MainCamera");
+        xAxis = transform.rotation.x;
+        yAxis = transform.rotation.y;
+        camra = GetComponent<Camera>();
     }
 
     void Update()
     {
-        if (Input.touchCount == 0)
+        // Check touch count
+        // Rotation
+        if (Input.touchCount == 1)
         {
-            oldTouchPositions[0] = null;
-            oldTouchPositions[1] = null;
-        }
-        else /*if (Input.touchCount == 1)*/
-        {
-            if (oldTouchPositions[0] == null || oldTouchPositions[1] != null)
+            // Touch started, store position
+            if (Input.GetTouch(0).phase == TouchPhase.Began)
             {
-                oldTouchPositions[0] = Input.GetTouch(0).position;
-                oldTouchPositions[1] = null;
+                firstTouch = Input.GetTouch(0).position;
+                xAxisTemp = xAxis;
+                yAxisTemp = yAxis;
+            }
+            // Finger moved
+            if (Input.GetTouch(0).phase == TouchPhase.Moved)
+            {
+                secondTouch = Input.GetTouch(0).position;
+                // Set new rotation
+                xAxis = xAxisTemp + (secondTouch.x - firstTouch.x) * -180.0f / Screen.width;
+                yAxis = yAxisTemp + (secondTouch.y - firstTouch.y) * 90.0f / Screen.height;
+                xAxis = Mathf.Clamp(xAxis, minimumX, maximumX);
+                yAxis = Mathf.Clamp(yAxis, minimumY, maximumY);
+                transform.rotation = Quaternion.Euler(yAxis, xAxis, 0.0f);
+            }
+        }
+        // If there are two touches on the device...
+        // Zoom
+        if (Input.touchCount == 2)
+        {
+            // Store both touches.
+            Touch touchZero = Input.GetTouch(0);
+            Touch touchOne = Input.GetTouch(1);
+
+            // Find the position in the previous frame of each touch.
+            Vector2 touchZeroPrevPos = touchZero.position - touchZero.deltaPosition;
+            Vector2 touchOnePrevPos = touchOne.position - touchOne.deltaPosition;
+
+            // Find the magnitude of the vector (the distance) between the touches in each frame.
+            float prevTouchDeltaMag = (touchZeroPrevPos - touchOnePrevPos).magnitude;
+            float touchDeltaMag = (touchZero.position - touchOne.position).magnitude;
+
+            // Find the difference in the distances between each frame.
+            float deltaMagnitudeDiff = prevTouchDeltaMag - touchDeltaMag;
+
+            // If the camera is orthographic...
+            if (camra.orthographic)
+            {
+                // ... change the orthographic size based on the change in distance between the touches.
+                camra.orthographicSize += deltaMagnitudeDiff * orthoZoomSpeed;
+
+                // Make sure the orthographic size never drops below zero.
+                camra.orthographicSize = Mathf.Clamp(camra.orthographicSize, 30F, 90F);
             }
             else
             {
-                Vector2 newTouchPosition = Input.GetTouch(0).position;
-                Vector4 tempVector4 = transform.position;
-                Quaternion tempQuaternion = new Quaternion( 0f, 0f, 0f, 0f );
-                tempQuaternion = MainCamera.transform.localRotation;
+                // Otherwise change the field of view based on the change in distance between the touches.
+                camra.fieldOfView += deltaMagnitudeDiff * perspectiveZoomSpeed;
 
-                tempQuaternion = Quaternion.LookRotation(tempVector4 + ((Vector4)transform.TransformDirection((Vector3)((oldTouchPositions[0] - newTouchPosition) * GetComponent<Camera>().orthographicSize / GetComponent<Camera>().pixelHeight * 2f))));
-                Debug.Log(tempQuaternion);
-                //tempPos = transform.localPosition;                                 //new
-                tempQuaternion.x = Mathf.Clamp(tempQuaternion.x, minMaxX[0], minMaxX[1]);   //new
-                tempQuaternion.y = Mathf.Clamp(tempQuaternion.z, minMaxZ[0], minMaxZ[1]);   //new
-                //tempPos.y = Mathf.Clamp(5, 5, 5);   //new
-                //tempPos.z = Mathf.Clamp(tempPos.z, minMaxZ[0], minMaxZ[1]);   //new
-                tempQuaternion.z = Mathf.Clamp(tempQuaternion.y, 0, 0);   //new
-                tempQuaternion.w = 0;
-                transform.rotation = tempQuaternion;                                 //new
-                oldTouchPositions[0] = newTouchPosition;
+                // Clamp the field of view to make sure it's between 30 and 90.
+                camra.fieldOfView = Mathf.Clamp(camra.fieldOfView, 30F, 90F);
             }
         }
     }

@@ -76,8 +76,7 @@
   <ItemGroup>
     <Compile Include="Assets\Code\Camra\CamraMovement.cs" />
     <Compile Include="Assets\Code\Camra\CamraRotation.cs" />
-    <Compile Include="Assets\Code\Camra\CamraRotationOld.cs" />
-    <Compile Include="Assets\Code\Camra\TouchCamera.cs" />
+    <Compile Include="Assets\Code\Camra\CamraZoom.cs" />
     <Compile Include="Assets\Code\Misc\TouchInput.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath)\SyntaxTree\UnityVS\2015\UnityVS.CSharp.targets" />
